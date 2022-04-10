@@ -32,6 +32,11 @@ public:
         ret = result.size();
         return ret;
     }
+
+    static void ExecuteProcess(const char* cmd)
+    {
+        system(cmd);
+    }
 };
 
 

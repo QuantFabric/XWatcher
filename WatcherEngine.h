@@ -10,12 +10,14 @@
 #include "YMLConfig.hpp"
 #include "Performance.hpp"
 #include "ShellEngine.hpp"
+#include "AppManager.hpp"
 
 class WatcherEngine
 {
 public:
     explicit WatcherEngine();
     virtual ~WatcherEngine();
+    void SetCommand(const std::string& cmd);
     void LoadConfig(const char* yml);
     void Start();
 protected:
@@ -32,6 +34,9 @@ protected:
     void HandleTraderCommand(const Message::PackMessage &msg);
 
     void UpdateColoStatus();
+    void InitAppStatus();
+    void UpdateAppStatus();
+    void UpdateAppStatus(Message::PackMessage& msg);
     
     bool IsTrading()const;
     void CheckTrading();
@@ -45,6 +50,8 @@ private:
     int m_OpenTime;
     int m_CloseTime;
     std::thread* m_pWorkThread;
+    std::string m_Command;
+    std::unordered_map<std::string, Message::PackMessage> m_AppStatusMap;
 };
 
 #endif // WATCHERENGINE_H

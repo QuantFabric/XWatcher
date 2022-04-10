@@ -48,6 +48,11 @@ int main(int argc, char *argv[])
     {
         app_log_path = p;
     }
+    std::string cmd;
+    for(int i = 0; i < argc; i++)
+    {
+        cmd += (std::string(argv[i]) + " ");
+    }
     Utils::gLogger = Utils::Singleton<Utils::Logger>::GetInstance();
     Utils::gLogger->setLogPath(app_log_path, "XWatcher");
     Utils::gLogger->Init();
@@ -55,6 +60,7 @@ int main(int argc, char *argv[])
 
     WatcherEngine engine;
     engine.LoadConfig(configPath.c_str());
+    engine.SetCommand(cmd);
     engine.Start();
     return 0;
 }

@@ -21,6 +21,12 @@ WatcherEngine::~WatcherEngine()
     m_pWorkThread = NULL;
 }
 
+void WatcherEngine::SetCommand(const std::string& cmd)
+{
+    m_Command = cmd;
+    Utils::gLogger->Log->info("WatcherEngine::SetCommand cmd:{}", m_Command);
+}
+
 void WatcherEngine::LoadConfig(const char* yml)
 {
     Utils::gLogger->Log->info("WatcherEngine::LoadConfig {} start", yml);
@@ -64,6 +70,9 @@ void WatcherEngine::RegisterClient(const char *ip, unsigned int port)
 
 void WatcherEngine::HandleThread()
 {
+    // XWatcher AppStatus Init 
+    InitAppStatus();
+
     Utils::gLogger->Log->info("WatcherEngine::HandleThread to handle message");
     while (true)
     {
@@ -93,7 +102,8 @@ void WatcherEngine::HandleThread()
             {
                 // Update Colo Status
                 UpdateColoStatus();
-
+                // Update App Status
+                UpdateAppStatus();
                 currentTimeStamp += 1;
             }
         }
@@ -155,12 +165,14 @@ void WatcherEngine::HandleCommand(const Message::PackMessage &msg)
     else if(Message::ECommandType::EKILL_APP == msg.Command.CmdType)
     {
         // Kill App
+        AppManager::KillApp(msg.Command.Command);
         Utils::gLogger->Log->info("WatcherEngine::HandleCommand KillApp Colo:{} Account:{} {}",
                                     msg.Command.Colo, msg.Command.Account, msg.Command.Command);
     }
     else if(Message::ECommandType::ESTART_APP == msg.Command.CmdType)
     {
         // Start App
+        AppManager::StartApp(msg.Command.Command);
         Utils::gLogger->Log->info("WatcherEngine::HandleCommand StartApp Colo:{} Account:{} {}",
                                     msg.Command.Colo, msg.Command.Account, msg.Command.Command);
     }
@@ -230,6 +242,7 @@ void WatcherEngine::ForwardToXServer(const Message::PackMessage &msg)
         break;
     case Message::EMessageType::EAppStatus:
         strncpy(message.AppStatus.Colo, m_XWatcherConfig.Colo.c_str(), sizeof(message.AppStatus.Colo));
+        UpdateAppStatus(message);
         break;
     case Message::EMessageType::EFutureMarketData:
         strncpy(message.FutureMarketData.Colo, m_XWatcherConfig.Colo.c_str(), sizeof(message.FutureMarketData.Colo));
@@ -284,6 +297,50 @@ void WatcherEngine::UpdateColoStatus()
     Performance::UpdateColoStatus(m_XWatcherConfig.Mount1, m_XWatcherConfig.Mount2, message.ColoStatus);
     m_HPPackClient->SendData((const unsigned char*)&message, sizeof(message));
     Performance::PrintColoStatus(message.ColoStatus);
+}
+
+void WatcherEngine::InitAppStatus()
+{
+    Message::PackMessage message;
+    message.MessageType = Message::EMessageType::EAppStatus;
+    strncpy(message.AppStatus.Colo, m_XWatcherConfig.Colo.c_str(), sizeof(message.AppStatus.Colo));
+    AppManager::UpdateAppStatus(m_Command, message.AppStatus);
+    std::string Key = std::string(message.AppStatus.AppName) + ":" + message.AppStatus.Account;
+    m_AppStatusMap[Key] = message;
+    m_HPPackClient->SendData((const unsigned char*)&message, sizeof(message));
+}
+
+void WatcherEngine::UpdateAppStatus()
+{
+    for(auto it = m_AppStatusMap.begin(); it != m_AppStatusMap.end(); it++)
+    {
+        AppManager::UpdateAppStatus(it->second.AppStatus);
+        m_HPPackClient->SendData((const unsigned char*)&(it->second), sizeof(it->second));
+        AppManager::PrintAppStatus(it->second.AppStatus);
+    }
+}
+
+void WatcherEngine::UpdateAppStatus(Message::PackMessage& msg)
+{
+    std::string Key = std::string(msg.AppStatus.AppName) + ":" + msg.AppStatus.Account;
+    auto it = m_AppStatusMap.find(Key);
+    if(it != m_AppStatusMap.end())
+    {
+        it->second.AppStatus.PID = msg.AppStatus.PID;
+        strncpy(it->second.AppStatus.Status, msg.AppStatus.Status, sizeof(it->second.AppStatus.Status));
+        // StartTime在交易进程App初始化时更新，第一次启动时时间戳
+        strncpy(it->second.AppStatus.LastStartTime, msg.AppStatus.LastStartTime, sizeof(it->second.AppStatus.LastStartTime));
+        strncpy(it->second.AppStatus.CommitID, msg.AppStatus.CommitID, sizeof(it->second.AppStatus.CommitID));
+        strncpy(it->second.AppStatus.UtilsCommitID, msg.AppStatus.UtilsCommitID, sizeof(it->second.AppStatus.UtilsCommitID));
+        strncpy(it->second.AppStatus.APIVersion, msg.AppStatus.APIVersion, sizeof(it->second.AppStatus.APIVersion));
+        strncpy(it->second.AppStatus.StartScript, msg.AppStatus.StartScript, sizeof(it->second.AppStatus.StartScript));
+        strncpy(it->second.AppStatus.UpdateTime, msg.AppStatus.UpdateTime, sizeof(it->second.AppStatus.UpdateTime));
+        memcpy(&msg, &it->second, sizeof(msg));
+    }
+    else
+    {
+        m_AppStatusMap[Key] = msg;
+    }
 }
 
 bool WatcherEngine::IsTrading()const

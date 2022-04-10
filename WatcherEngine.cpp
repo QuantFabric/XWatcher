@@ -84,6 +84,18 @@ void WatcherEngine::HandleThread()
             {
                 HandlePackMessage(m_PackMessage);
             }
+            static unsigned long currentTimeStamp = m_CurrentTimeStamp / 1000;
+            if(currentTimeStamp < m_CurrentTimeStamp / 1000)
+            {
+                currentTimeStamp = m_CurrentTimeStamp / 1000;
+            }
+            if(currentTimeStamp % 5 == 0)
+            {
+                // Update Colo Status
+                UpdateColoStatus();
+
+                currentTimeStamp += 1;
+            }
         }
         if(m_CurrentTimeStamp % 2000 == 0)
         {
@@ -191,7 +203,6 @@ void WatcherEngine::HandleActionRequest(const Message::PackMessage &msg)
             }
         }
     }
-
 }
 
 void WatcherEngine::ForwardToXServer(const Message::PackMessage &msg)
@@ -263,6 +274,16 @@ void WatcherEngine::HandleTraderCommand(const Message::PackMessage &msg)
             }
         }
     }
+}
+
+void WatcherEngine::UpdateColoStatus()
+{
+    Message::PackMessage message;
+    message.MessageType = Message::EMessageType::EColoStatus;
+    strncpy(message.ColoStatus.Colo, m_XWatcherConfig.Colo.c_str(),sizeof(message.ColoStatus.Colo));
+    Performance::UpdateColoStatus(m_XWatcherConfig.Mount1, m_XWatcherConfig.Mount2, message.ColoStatus);
+    m_HPPackClient->SendData((const unsigned char*)&message, sizeof(message));
+    Performance::PrintColoStatus(message.ColoStatus);
 }
 
 bool WatcherEngine::IsTrading()const

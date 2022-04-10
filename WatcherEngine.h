@@ -8,6 +8,8 @@
 #include "HPPackServer.h"
 #include "HPPackClient.h"
 #include "YMLConfig.hpp"
+#include "Performance.hpp"
+#include "ShellEngine.hpp"
 
 class WatcherEngine
 {
@@ -28,6 +30,8 @@ protected:
 
     void HandleRiskCommand(const Message::PackMessage &msg);
     void HandleTraderCommand(const Message::PackMessage &msg);
+
+    void UpdateColoStatus();
     
     bool IsTrading()const;
     void CheckTrading();

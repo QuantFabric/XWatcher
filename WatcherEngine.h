@@ -21,7 +21,14 @@ protected:
     void RegisterClient(const char *ip, unsigned int port);
     void HandleThread();
     void HandlePackMessage(const Message::PackMessage &msg);
+    void HandleCommand(const Message::PackMessage &msg);
+    void HandleOrderRequest(const Message::PackMessage &msg);
+    void HandleActionRequest(const Message::PackMessage &msg);
+    void ForwardToXServer(const Message::PackMessage &msg);
 
+    void HandleRiskCommand(const Message::PackMessage &msg);
+    void HandleTraderCommand(const Message::PackMessage &msg);
+    
     bool IsTrading()const;
     void CheckTrading();
 private:

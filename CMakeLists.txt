@@ -5,7 +5,7 @@ PROJECT(XWatcher)
 set(CMAKE_CXX_FLAGS "-fPIC")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-SET(AppVersion 0.1.0)
+SET(AppVersion 0.2.0)
 SET(XWatcher_Version ${PROJECT_NAME}_${AppVersion})
 SET(APIVersion "")
 

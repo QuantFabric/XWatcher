@@ -29,6 +29,7 @@ protected:
     void HandleOrderRequest(const Message::PackMessage &msg);
     void HandleActionRequest(const Message::PackMessage &msg);
     void ForwardToXServer(const Message::PackMessage &msg);
+    void HandleSpotMarketData(const Message::PackMessage &msg);
 
     void HandleRiskCommand(const Message::PackMessage &msg);
     void HandleTraderCommand(const Message::PackMessage &msg);

@@ -91,7 +91,14 @@ void WatcherEngine::HandleThread()
             ret = m_HPPackClient->m_PackMessageQueue.pop(m_PackMessage);
             if (ret)
             {
-                HandlePackMessage(m_PackMessage);
+                if(Message::EMessageType::ESpotMarketData == m_PackMessage.MessageType)
+                {
+                    HandleSpotMarketData(m_PackMessage);
+                }
+                else
+                {
+                    HandlePackMessage(m_PackMessage);
+                }
             }
             static unsigned long currentTimeStamp = m_CurrentTimeStamp / 1000;
             if(currentTimeStamp < m_CurrentTimeStamp / 1000)
@@ -139,6 +146,7 @@ void WatcherEngine::HandlePackMessage(const Message::PackMessage &msg)
     case Message::EMessageType::EAppStatus:
     case Message::EMessageType::EFutureMarketData:
     case Message::EMessageType::EStockMarketData:
+    case Message::EMessageType::ESpotMarketData:
         ForwardToXServer(msg);
         break;
     default:
@@ -193,6 +201,13 @@ void WatcherEngine::HandleOrderRequest(const Message::PackMessage &msg)
                                             it->second.Account, msg.OrderRequest.Ticker);
                 break;
             }
+            else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+            {
+                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+                Utils::gLogger->Log->info("WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}",
+                                            it->second.Account, msg.OrderRequest.Ticker);
+                break;
+            }
         }
     }
 
@@ -207,6 +222,13 @@ void WatcherEngine::HandleActionRequest(const Message::PackMessage &msg)
         for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
         {
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
+            {
+                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+                Utils::gLogger->Log->info("WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}",
+                                            it->second.Account, msg.ActionRequest.OrderRef);
+                break;
+            }
+            else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
                 Utils::gLogger->Log->info("WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}",
@@ -250,8 +272,23 @@ void WatcherEngine::ForwardToXServer(const Message::PackMessage &msg)
     case Message::EMessageType::EStockMarketData:
         strncpy(message.StockMarketData.Colo, m_XWatcherConfig.Colo.c_str(), sizeof(message.StockMarketData.Colo));
         break;
+    case Message::EMessageType::ESpotMarketData:
+        strncpy(message.SpotMarketData.Colo, m_XWatcherConfig.Colo.c_str(), sizeof(message.SpotMarketData.Colo));
+        break;
     }
     m_HPPackClient->SendData((const unsigned char*)&message, sizeof(message));
+}
+
+void WatcherEngine::HandleSpotMarketData(const Message::PackMessage &msg)
+{
+    for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+    {
+        if(Message::EClientType::EXMARKETCENTER == it->second.ClientType)
+        {
+            m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+            Utils::gLogger->Log->info("WatcherEngine::HandleSpotMarketData send Spot Market Data to Connection:{} Account:{}", it->second.dwConnID, it->second.Account);
+        }
+    }
 }
 
 void WatcherEngine::HandleRiskCommand(const Message::PackMessage &msg)

@@ -54,25 +54,25 @@ add_definitions(-DAPP_COMMITID=\"${APP_COMMITID}\")
 add_definitions(-DUTILS_COMMITID=\"${UTILS_COMMITID}\") 
 add_definitions(-DAPI_VERSION=\"${APIVersion}\")
 
-include_directories(${CMAKE_SOURCE_DIR}/../Utils/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../Utils/)
 
 # HP-Scoket
-include_directories(${CMAKE_SOURCE_DIR}/../XAPI/HP-Socket/5.8.2/include/)
-link_directories(${CMAKE_SOURCE_DIR}/../XAPI/HP-Socket/5.8.2/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/HP-Socket/5.8.2/include/)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/HP-Socket/5.8.2/lib)
 
 # SPDLog
-include_directories(${CMAKE_SOURCE_DIR}/../XAPI/SPDLog/1.8.5/include/)
-link_directories(${CMAKE_SOURCE_DIR}/../XAPI/SPDLog/1.8.5/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/SPDLog/1.8.5/include/)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/SPDLog/1.8.5/lib)
 
 # YAML-CPP
-include_directories(${CMAKE_SOURCE_DIR}/../XAPI/YAML-CPP/0.6.3/include/)
-link_directories(${CMAKE_SOURCE_DIR}/../XAPI/YAML-CPP/0.6.3/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/YAML-CPP/0.6.3/include/)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/YAML-CPP/0.6.3/lib)
 
 set(SOURCES main.cpp 
             HPPackServer.cpp 
             HPPackClient.cpp
             WatcherEngine.cpp
-            ${CMAKE_SOURCE_DIR}/../Utils/Logger.cpp)
+            ${CMAKE_CURRENT_SOURCE_DIR}/../Utils/Logger.cpp)
 add_executable(${XWatcher_Version} ${SOURCES})
 
 target_link_libraries(${XWatcher_Version} spdlog pthread hpsocket4c yaml-cpp)                      

@@ -5,14 +5,14 @@ PROJECT(XWatcher)
 set(CMAKE_CXX_FLAGS "-fPIC")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-SET(AppVersion 0.4.0)
+SET(AppVersion 0.5.0)
 SET(XWatcher_Version ${PROJECT_NAME}_${AppVersion})
 
 # 默认输出debug版
 #SET(CMAKE_BUILD_TYPE "Release")
 #SET(CMAKE_BUILD_TYPE "debug")
 SET(CMAKE_BUILD_TYPE "RelWithDebInfo")
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 macro(Get_CommitID APP_COMMITID)   
     find_package(Git QUIET)     # 查找Git，QUIET静默方式不报错
@@ -67,6 +67,9 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/SPDLog/1.8.5/lib)
 # YAML-CPP
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/YAML-CPP/0.6.3/include/)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/YAML-CPP/0.6.3/lib)
+
+# Parallel HashMap
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../XAPI/parallel_hashmap/)
 
 set(SOURCES main.cpp 
             HPPackServer.cpp 

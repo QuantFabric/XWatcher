@@ -81,14 +81,14 @@ void WatcherEngine::HandleThread()
         {
             // Handle Server Received Message from APP
             memset(&m_PackMessage, 0, sizeof(m_PackMessage));
-            bool ret = m_HPPackServer->m_PackMessageQueue.pop(m_PackMessage);
+            bool ret = m_HPPackServer->m_PackMessageQueue.Pop(m_PackMessage);
             if (ret)
             {
                 HandlePackMessage(m_PackMessage);
             }
             // Handle Client Received Message from XServer
             memset(&m_PackMessage, 0, sizeof(m_PackMessage));
-            ret = m_HPPackClient->m_PackMessageQueue.pop(m_PackMessage);
+            ret = m_HPPackClient->m_PackMessageQueue.Pop(m_PackMessage);
             if (ret)
             {
                 if(Message::EMessageType::ESpotMarketData == m_PackMessage.MessageType)
@@ -380,14 +380,13 @@ void WatcherEngine::UpdateAppStatus(Message::PackMessage& msg)
     }
 }
 
-bool WatcherEngine::IsTrading()const
+bool WatcherEngine::IsTrading() const
 {
     return m_Trading;
 }
 
 void WatcherEngine::CheckTrading()
 {
-    std::string buffer = Utils::getCurrentTimeMs() + 11;
-    m_CurrentTimeStamp = Utils::getTimeStampMs(buffer.c_str());
+    m_CurrentTimeStamp = Utils::getTimeStampMs(Utils::getCurrentTimeMs() + 11);
     m_Trading  = (m_CurrentTimeStamp >= m_OpenTime && m_CurrentTimeStamp <= m_CloseTime);
 }

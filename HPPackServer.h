@@ -11,7 +11,9 @@
 #include "HPSocket4C.h"
 #include "PackMessage.hpp"
 #include "Logger.h"
-#include "RingBuffer.hpp"
+#include "LockFreeQueue.hpp"
+#include "phmap.h"
+#include <shared_mutex>
 
 #define APP_NAME "XWatcher"
 
@@ -36,8 +38,12 @@ public:
     void Stop();
     void SendData(HP_CONNID dwConnID, const unsigned char *pBuffer, int iLength);
 public:
-    static std::unordered_map<HP_CONNID, Connection> m_sConnections;
-    static Utils::RingBuffer<Message::PackMessage> m_PackMessageQueue;
+    typedef phmap::parallel_flat_hash_map<HP_CONNID, Connection, phmap::priv::hash_default_hash<HP_CONNID>,
+                                     phmap::priv::hash_default_eq<HP_CONNID>,
+                                     std::allocator<std::pair<const HP_CONNID, Connection>>, 8, std::shared_mutex>
+    ConnectionMapT;
+    static ConnectionMapT m_sConnections;
+    static Utils::LockFreeQueue<Message::PackMessage> m_PackMessageQueue;
 protected:
     static En_HP_HandleResult __stdcall OnAccept(HP_Server pSender, HP_CONNID dwConnID, UINT_PTR soClient);
     static En_HP_HandleResult __stdcall OnSend(HP_Server pSender, HP_CONNID dwConnID, const BYTE *pData, int iLength);

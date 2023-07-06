@@ -25,7 +25,7 @@ struct Connection
     char Account[16];
     char PassWord[16];
     char AppName[32];
-    char Plugins[320];
+    char Plugins[400];
     char UUID[32];
 };
 

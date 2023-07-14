@@ -35,9 +35,14 @@ public:
             //  CentOS Linux release 7.9.2009 (Core)
             std::vector<std::string> vec;
             Utils::Split(line, " ", vec);
-            if(vec.size() == 5)
+            if(vec.size() >= 5)
             {
                 std::string OSVersion = vec.at(0) + " " + vec.at(3);
+                strncpy(ColoStatus.OSVersion, OSVersion.c_str(), sizeof(ColoStatus.OSVersion));
+            }
+            else
+            {
+                std::string OSVersion = "Unkown Version";
                 strncpy(ColoStatus.OSVersion, OSVersion.c_str(), sizeof(ColoStatus.OSVersion));
             }
         }

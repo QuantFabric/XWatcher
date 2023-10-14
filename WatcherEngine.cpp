@@ -322,6 +322,12 @@ void WatcherEngine::HandleTraderCommand(const Message::PackMessage &msg)
                 Utils::gLogger->Log->info("WatcherEngine::HandleCommand send TransferFund Command to XTrader, {}", msg.Command.Command);
                 break;
             }
+            else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+            {
+                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+                Utils::gLogger->Log->info("WatcherEngine::HandleCommand send TransferFund Command to XTrader, {}", msg.Command.Command);
+                break;
+            }
         }
     }
 }

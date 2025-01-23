@@ -1,6 +1,5 @@
 #include "WatcherEngine.h"
 
-extern Utils::Logger *gLogger;
 
 WatcherEngine::WatcherEngine()
 {
@@ -24,22 +23,22 @@ WatcherEngine::~WatcherEngine()
 void WatcherEngine::SetCommand(const std::string& cmd)
 {
     m_Command = cmd;
-    Utils::gLogger->Log->info("WatcherEngine::SetCommand cmd:{}", m_Command);
+    FMTLOG(fmtlog::INF, "WatcherEngine::SetCommand cmd:{}", m_Command);
 }
 
 void WatcherEngine::LoadConfig(const char* yml)
 {
-    Utils::gLogger->Log->info("WatcherEngine::LoadConfig {} start", yml);
+    FMTLOG(fmtlog::INF, "WatcherEngine::LoadConfig {} start", yml);
     std::string errorBuffer;
     if(Utils::LoadXWatcherConfig(yml, m_XWatcherConfig, errorBuffer))
     {
-        Utils::gLogger->Log->info("WatcherEngine::LoadXWatcherConfig {} successed", yml);
+        FMTLOG(fmtlog::INF, "WatcherEngine::LoadXWatcherConfig {} successed", yml);
         m_OpenTime = Utils::getTimeStampMs(m_XWatcherConfig.OpenTime.c_str());
         m_CloseTime = Utils::getTimeStampMs(m_XWatcherConfig.CloseTime.c_str());
     }
     else
     {
-        Utils::gLogger->Log->error("WatcherEngine::LoadXWatcherConfig {} failed, {}", yml, errorBuffer.c_str());
+        FMTLOG(fmtlog::ERR, "WatcherEngine::LoadXWatcherConfig {} failed, {}", yml, errorBuffer);
     }
 }
 
@@ -73,7 +72,7 @@ void WatcherEngine::HandleThread()
     // XWatcher AppStatus Init 
     InitAppStatus();
 
-    Utils::gLogger->Log->info("WatcherEngine::HandleThread to handle message");
+    FMTLOG(fmtlog::INF, "WatcherEngine::HandleThread to handle message");
     while (true)
     {
         CheckTrading();
@@ -150,9 +149,7 @@ void WatcherEngine::HandlePackMessage(const Message::PackMessage &msg)
         ForwardToXServer(msg);
         break;
     default:
-        char buffer[128] = {0};
-        sprintf(buffer, "UnKown Message type:0X%X", msg.MessageType);
-        Utils::gLogger->Log->info("WatcherEngine::HandlePackMessage {}", buffer);
+        FMTLOG(fmtlog::WRN, "WatcherEngine::HandlePackMessage unkown message type: {:#X}", msg.MessageType);
         break;
     }
 }
@@ -174,15 +171,13 @@ void WatcherEngine::HandleCommand(const Message::PackMessage &msg)
     {
         // Kill App
         AppManager::KillApp(msg.Command.Command);
-        Utils::gLogger->Log->info("WatcherEngine::HandleCommand KillApp Colo:{} Account:{} {}",
-                                    msg.Command.Colo, msg.Command.Account, msg.Command.Command);
+        FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand KillApp Colo:{} Account:{} {}", msg.Command.Colo, msg.Command.Account, msg.Command.Command);
     }
     else if(Message::ECommandType::ESTART_APP == msg.Command.CmdType)
     {
         // Start App
         AppManager::StartApp(msg.Command.Command);
-        Utils::gLogger->Log->info("WatcherEngine::HandleCommand StartApp Colo:{} Account:{} {}",
-                                    msg.Command.Colo, msg.Command.Account, msg.Command.Command);
+        FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand StartApp Colo:{} Account:{} {}", msg.Command.Colo, msg.Command.Account, msg.Command.Command);
     }
 }
 
@@ -197,15 +192,13 @@ void WatcherEngine::HandleOrderRequest(const Message::PackMessage &msg)
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                Utils::gLogger->Log->info("WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}",
-                                            it->second.Account, msg.OrderRequest.Ticker);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}", it->second.Account, msg.OrderRequest.Ticker);
                 break;
             }
             else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                Utils::gLogger->Log->info("WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}",
-                                            it->second.Account, msg.OrderRequest.Ticker);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}", it->second.Account, msg.OrderRequest.Ticker);
                 break;
             }
         }
@@ -224,15 +217,13 @@ void WatcherEngine::HandleActionRequest(const Message::PackMessage &msg)
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                Utils::gLogger->Log->info("WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}",
-                                            it->second.Account, msg.ActionRequest.OrderRef);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}", it->second.Account, msg.ActionRequest.OrderRef);
                 break;
             }
             else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                Utils::gLogger->Log->info("WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}",
-                                            it->second.Account, msg.ActionRequest.OrderRef);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}", it->second.Account, msg.ActionRequest.OrderRef);
                 break;
             }
         }
@@ -286,7 +277,7 @@ void WatcherEngine::HandleSpotMarketData(const Message::PackMessage &msg)
         if(Message::EClientType::EXMARKETCENTER == it->second.ClientType)
         {
             m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-            Utils::gLogger->Log->info("WatcherEngine::HandleSpotMarketData send Spot Market Data to Connection:{} Account:{}", it->second.dwConnID, it->second.Account);
+            FMTLOG(fmtlog::INF, "WatcherEngine::HandleSpotMarketData send Spot Market Data to Connection:{} Account:{}", it->second.dwConnID, it->second.Account);
         }
     }
 }
@@ -301,7 +292,7 @@ void WatcherEngine::HandleRiskCommand(const Message::PackMessage &msg)
             if(Message::EClientType::EXRISKJUDGE == it->second.ClientType)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                Utils::gLogger->Log->info("WatcherEngine::HandleRiskCommand send Risk Command to RiskJudge, {}", msg.Command.Command);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleRiskCommand send Risk Command to RiskJudge, {}", msg.Command.Command);
                 break;
             }
         }
@@ -319,13 +310,13 @@ void WatcherEngine::HandleTraderCommand(const Message::PackMessage &msg)
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                Utils::gLogger->Log->info("WatcherEngine::HandleCommand send TransferFund Command to XTrader, {}", msg.Command.Command);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to XTrader, {}", msg.Command.Command);
                 break;
             }
             else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                Utils::gLogger->Log->info("WatcherEngine::HandleCommand send TransferFund Command to XTrader, {}", msg.Command.Command);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to HFTrader, {}", msg.Command.Command);
                 break;
             }
         }

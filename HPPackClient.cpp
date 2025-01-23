@@ -1,7 +1,6 @@
 #include "HPPackClient.h"
 
 bool HPPackClient::m_Connected = false;
-extern Utils::Logger* gLogger;
 Utils::LockFreeQueue<Message::PackMessage> HPPackClient::m_PackMessageQueue(1 << 10);
 
 HPPackClient::HPPackClient(const char* ip, unsigned int port)
@@ -26,17 +25,14 @@ void HPPackClient::Start()
 {
     if (m_Connected)
         return;
-    char errorString[512] = { 0 };
     if (::HP_Client_Start(m_pClient, (LPCTSTR)m_ServerIP.c_str(), m_ServerPort, false))
     {
-        sprintf(errorString, "HPPackClient::Start connected to server[%s:%d]", m_ServerIP.c_str(), m_ServerPort);
-        Utils::gLogger->Log->info(errorString);
+        FMTLOG(fmtlog::INF, "HPPackClient::Start connected to server[{}:{}]", m_ServerIP, m_ServerPort);
     }
     else
     {
-        sprintf(errorString, "HPPackClient::Start connected to server[%s:%d] failed, error code:%d error massage:%s",
-                m_ServerIP.c_str(), m_ServerPort, ::HP_Client_GetLastError(m_pClient), HP_Client_GetLastErrorDesc(m_pClient));
-        Utils::gLogger->Log->warn(errorString);
+        FMTLOG(fmtlog::WRN, "HPPackClient::Start connected to server[{}:{}] failed, error code:{} error massage:{}",
+                m_ServerIP, m_ServerPort, ::HP_Client_GetLastError(m_pClient), HP_Client_GetLastErrorDesc(m_pClient));
     }
 }
 
@@ -73,7 +69,7 @@ void HPPackClient::SendData(const unsigned char* pBuffer, int iLength)
     static std::vector<Message::PackMessage> bufferQueue;
     if(!m_Connected)
     {
-        Utils::gLogger->Log->warn("HPPackClient::SendData failed, disconnected to server");
+        FMTLOG(fmtlog::WRN, "HPPackClient::SendData failed, disconnected to server");
         Message::PackMessage message;
         memset(&message, 0, sizeof(message));
         memcpy(&message, pBuffer, sizeof(message));
@@ -88,11 +84,8 @@ void HPPackClient::SendData(const unsigned char* pBuffer, int iLength)
     bool ret = ::HP_Client_Send(m_pClient, pBuffer, iLength);
     if (!ret)
     {
-        char errorString[128] = { 0 };
-        sprintf(errorString,
-                "HPPackClient::SendData failed, sys error code:%d, error code:%d, error message:%s",
+        FMTLOG(fmtlog::WRN, "HPPackClient::SendData failed, sys error code:{}, error code:{}, error message:{}",
                 SYS_GetLastError(), HP_Client_GetLastError(m_pClient), HP_Client_GetLastErrorDesc(m_pClient));
-        Utils::gLogger->Log->warn(errorString);
     }
 }
 
@@ -111,10 +104,7 @@ En_HP_HandleResult __stdcall HPPackClient::OnConnect(HP_Client pSender, HP_CONNI
     USHORT usPort;
     ::HP_Client_GetLocalAddress(pSender, szAddress, &iAddressLen, &usPort);
     m_Connected = true;
-    char errorString[128] = { 0 };
-    sprintf(errorString, "HPPackClient::OnConnect %s:%d connected to server, dwConnID:%d",szAddress, usPort, dwConnID);
-    Utils::gLogger->Log->info(errorString);
-
+    FMTLOG(fmtlog::INF, "HPPackClient::OnConnect {}:{} connected to server, dwConnID:{}", szAddress, usPort, dwConnID);
     return HR_OK;
 }
 
@@ -137,9 +127,7 @@ En_HP_HandleResult __stdcall HPPackClient::OnClose(HP_Server pSender, HP_CONNID 
     int iAddressLen = sizeof(szAddress) / sizeof(TCHAR);
     USHORT usPort;
     ::HP_Client_GetLocalAddress(pSender, szAddress, &iAddressLen, &usPort);
-    char errorString[128] = { 0 };
-    sprintf(errorString, "HPPackClient::OnClose %s:%d disconnected connID:%d", szAddress, usPort, dwConnID);
-    Utils::gLogger->Log->warn(errorString);
+    FMTLOG(fmtlog::WRN, "HPPackClient::OnClose {}:{} disconnected connID:{}", szAddress, usPort, dwConnID);
     m_Connected = false;
     return HR_OK;
 }

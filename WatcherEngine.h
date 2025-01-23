@@ -5,6 +5,7 @@
 #include <vector>
 #include <mutex>
 #include <unordered_map>
+#include "FMTLogger.hpp"
 #include "HPPackServer.h"
 #include "HPPackClient.h"
 #include "YMLConfig.hpp"

@@ -53,10 +53,8 @@ int main(int argc, char *argv[])
     {
         cmd += (std::string(argv[i]) + " ");
     }
-    Utils::gLogger = Utils::Singleton<Utils::Logger>::GetInstance();
-    Utils::gLogger->setLogPath(app_log_path, "XWatcher");
-    Utils::gLogger->Init();
-    Utils::gLogger->setDebugLevel(debug);
+    FMTLog::Logger::Init(app_log_path, "XWatcher");
+    FMTLog::Logger::SetDebugLevel(debug);
 
     WatcherEngine engine;
     engine.LoadConfig(configPath.c_str());

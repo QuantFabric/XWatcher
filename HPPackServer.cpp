@@ -124,7 +124,7 @@ En_HP_HandleResult __stdcall HPPackServer::OnReceive(HP_Server pSender, HP_CONNI
     Message::PackMessage message;
     memcpy(&message, pData, iLength);
     while(!m_PackMessageQueue.Push(message));
-    FMTLOG(fmtlog::INF, "HPPackServer::OnReceive receive PackMessage, MessageType:{:#X}", message.MessageType);
+    FMTLOG(fmtlog::INF, "HPPackServer::OnReceive receive PackMessage, MessageType:{:#X} {}", message.MessageType, iLength);
     // LoginRequest
     if (Message::EMessageType::ELoginRequest == message.MessageType)
     {

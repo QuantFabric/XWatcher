@@ -69,6 +69,16 @@ void WatcherEngine::RegisterClient(const char *ip, unsigned int port)
 
 void WatcherEngine::HandleThread()
 {
+    Message::PackMessage message;
+    memset(&message, 0, sizeof(message));
+    message.MessageType = Message::EMessageType::EEventLog;
+    message.EventLog.Level = Message::EEventLogLevel::EINFO;
+    strncpy(message.EventLog.App, APP_NAME, sizeof(message.EventLog.App));
+    fmt::format_to_n(message.EventLog.Event, sizeof(message.EventLog.Event), 
+                    "Colo:{} XWatcher Start", m_XWatcherConfig.Colo);
+    strncpy(message.EventLog.UpdateTime, Utils::getCurrentTimeUs(), sizeof(message.EventLog.UpdateTime));
+    HandlePackMessage(message);
+
     // XWatcher AppStatus Init 
     InitAppStatus();
 

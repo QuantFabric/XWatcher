@@ -5,7 +5,7 @@ PROJECT(XWatcher)
 set(CMAKE_CXX_FLAGS "-fPIC")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-SET(AppVersion 0.6.0)
+SET(AppVersion 0.6.1)
 SET(XWatcher_Version ${PROJECT_NAME}_${AppVersion})
 
 # 默认输出debug版
@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_definitions(-DFMT_HEADER_ONLY)
 add_definitions(-DFMTLOG_HEADER_ONLY)
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
 macro(Get_CommitID APP_COMMITID)   
     find_package(Git QUIET)     # 查找Git，QUIET静默方式不报错

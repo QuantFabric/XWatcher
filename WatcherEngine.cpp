@@ -300,10 +300,18 @@ void WatcherEngine::HandleRiskCommand(const Message::PackMessage &msg)
     {
         for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
         {
+
+            std::string Account = msg.Command.Account;
             if(Message::EClientType::EXRISKJUDGE == it->second.ClientType)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
                 FMTLOG(fmtlog::INF, "WatcherEngine::HandleRiskCommand send Risk Command to RiskJudge, {}", msg.Command.Command);
+                break;
+            }
+            else if(Message::EClientType::EHFTRADER  == it->second.ClientType && Account == it->second.Account)
+            {
+                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleRiskCommand send Risk Command to HFTrader:{}, {}", Account, msg.Command.Command);
                 break;
             }
         }
@@ -321,13 +329,13 @@ void WatcherEngine::HandleTraderCommand(const Message::PackMessage &msg)
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to XTrader, {}", msg.Command.Command);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to XTrader:{}, {}", Account, msg.Command.Command);
                 break;
             }
             else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
             {
                 m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to HFTrader, {}", msg.Command.Command);
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to HFTrader:{}, {}", Account, msg.Command.Command);
                 break;
             }
         }

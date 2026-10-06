@@ -167,7 +167,9 @@ void WatcherEngine::HandlePackMessage(const Message::PackMessage &msg)
 void WatcherEngine::HandleCommand(const Message::PackMessage &msg)
 {
     if(Message::ECommandType::EUPDATE_RISK_POSITION_LIMIT == msg.Command.CmdType 
+       || Message::ECommandType::EDELETE_RISK_POSITION_LIMIT == msg.Command.CmdType 
        || Message::ECommandType::EUPDATE_RISK_LIMIT == msg.Command.CmdType
+       || Message::ECommandType::EDELETE_RISK_LIMIT == msg.Command.CmdType
        || Message::ECommandType::EUPDATE_RISK_ACCOUNT_LOCKED == msg.Command.CmdType) 
     {
         HandleRiskCommand(msg);

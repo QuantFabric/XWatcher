@@ -200,21 +200,39 @@ void WatcherEngine::HandleOrderRequest(const Message::PackMessage &msg)
     std::string Colo = msg.OrderRequest.Colo;
     if(Colo == m_XWatcherConfig.Colo)
     {
-        std::string Account = msg.OrderRequest.Account;
+        const std::string Account = msg.OrderRequest.Account;
+        HP_CONNID TargetConnID = 0;
+        bool Found = false;
+
+        // Prefer the XTrader connection that matches the order account.
         for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
         {
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}", it->second.Account, msg.OrderRequest.Ticker);
+                TargetConnID = it->second.dwConnID;
+                Found = true;
                 break;
             }
-            else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+        }
+
+        // Fall back to HFTrader only when no matching XTrader is available.
+        if(!Found)
+        {
+            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}", it->second.Account, msg.OrderRequest.Ticker);
-                break;
+                if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+                {
+                    TargetConnID = it->second.dwConnID;
+                    Found = true;
+                    break;
+                }
             }
+        }
+
+        if(Found)
+        {
+            m_HPPackServer->SendData(TargetConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+            FMTLOG(fmtlog::INF, "WatcherEngine::HandleOrderRequest send OrderRequest to Account:{} Ticker:{}", Account, msg.OrderRequest.Ticker);
         }
     }
 
@@ -225,21 +243,39 @@ void WatcherEngine::HandleActionRequest(const Message::PackMessage &msg)
     std::string Colo = msg.ActionRequest.Colo;
     if(Colo == m_XWatcherConfig.Colo)
     {
-        std::string Account = msg.ActionRequest.Account;
+        const std::string Account = msg.ActionRequest.Account;
+        HP_CONNID TargetConnID = 0;
+        bool Found = false;
+
+        // Prefer the XTrader connection that matches the action account.
         for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
         {
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}", it->second.Account, msg.ActionRequest.OrderRef);
+                TargetConnID = it->second.dwConnID;
+                Found = true;
                 break;
             }
-            else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+        }
+
+        // Fall back to HFTrader only when no matching XTrader is available.
+        if(!Found)
+        {
+            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}", it->second.Account, msg.ActionRequest.OrderRef);
-                break;
+                if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+                {
+                    TargetConnID = it->second.dwConnID;
+                    Found = true;
+                    break;
+                }
             }
+        }
+
+        if(Found)
+        {
+            m_HPPackServer->SendData(TargetConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+            FMTLOG(fmtlog::INF, "WatcherEngine::HandleActionRequest send ActionRequest to Account:{} OrderRef:{}", Account, msg.ActionRequest.OrderRef);
         }
     }
 }
@@ -301,20 +337,47 @@ void WatcherEngine::HandleRiskCommand(const Message::PackMessage &msg)
     std::string Colo = msg.Command.Colo;
     if(Colo == m_XWatcherConfig.Colo)
     {
+        const std::string Account = msg.Command.Account;
+        HP_CONNID TargetConnID = 0;
+        bool Found = false;
+        bool SendToHFTrader = false;
+
+        // Prefer the HFTrader connection that matches the command account.
         for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
         {
-            std::string Account = msg.Command.Account;
-            if(Message::EClientType::EHFTRADER  == it->second.ClientType && Account == it->second.Account)
+            if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleRiskCommand send Risk Command to HFTrader:{}, {}", Account, msg.Command.Command);
+                TargetConnID = it->second.dwConnID;
+                Found = true;
+                SendToHFTrader = true;
                 break;
             }
-            else if(Message::EClientType::EXRISKJUDGE == it->second.ClientType)
+        }
+
+        // Fall back to RiskJudge only when no matching HFTrader is available.
+        if(!Found)
+        {
+            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+                if(Message::EClientType::EXRISKJUDGE == it->second.ClientType)
+                {
+                    TargetConnID = it->second.dwConnID;
+                    Found = true;
+                    break;
+                }
+            }
+        }
+
+        if(Found)
+        {
+            m_HPPackServer->SendData(TargetConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+            if(SendToHFTrader)
+            {
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleRiskCommand send Risk Command to HFTrader:{}, {}", Account, msg.Command.Command);
+            }
+            else
+            {
                 FMTLOG(fmtlog::INF, "WatcherEngine::HandleRiskCommand send Risk Command to RiskJudge, {}", msg.Command.Command);
-                break;
             }
         }
     }
@@ -325,20 +388,47 @@ void WatcherEngine::HandleTraderCommand(const Message::PackMessage &msg)
     std::string Colo = msg.Command.Colo;
     if(Colo == m_XWatcherConfig.Colo)
     {
+        const std::string Account = msg.Command.Account;
+        HP_CONNID TargetConnID = 0;
+        bool Found = false;
+        bool SendToXTrader = false;
+
+        // Prefer the XTrader connection that matches the command account.
         for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
         {
-            std::string Account = msg.Command.Account;
             if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to XTrader:{}, {}", Account, msg.Command.Command);
+                TargetConnID = it->second.dwConnID;
+                Found = true;
+                SendToXTrader = true;
                 break;
             }
-            else if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+        }
+
+        // Fall back to HFTrader only when no matching XTrader is available.
+        if(!Found)
+        {
+            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
             {
-                m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-                FMTLOG(fmtlog::INF, "WatcherEngine::HandleCommand send TransferFund Command to HFTrader:{}, {}", Account, msg.Command.Command);
-                break;
+                if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+                {
+                    TargetConnID = it->second.dwConnID;
+                    Found = true;
+                    break;
+                }
+            }
+        }
+
+        if(Found)
+        {
+            m_HPPackServer->SendData(TargetConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+            if(SendToXTrader)
+            {
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleTraderCommand send TransferFund Command to XTrader:{}, {}", Account, msg.Command.Command);
+            }
+            else
+            {
+                FMTLOG(fmtlog::INF, "WatcherEngine::HandleTraderCommand send TransferFund Command to HFTrader:{}, {}", Account, msg.Command.Command);
             }
         }
     }

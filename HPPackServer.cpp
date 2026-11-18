@@ -138,8 +138,8 @@ En_HP_HandleResult __stdcall HPPackServer::OnReceive(HP_Server pSender, HP_CONNI
             char errorString[512] = {0};
             sprintf(errorString, "HPPackServer::OnReceive accept an new Client login from %s:%d, Account:%s",
                     szAddress, usPort, message.LoginRequest.Account);
-            FMTLOG(fmtlog::INF, "HPPackServer::OnReceive accept an new Client login from {}:{}, Account:{}",
-                    szAddress, usPort, message.LoginRequest.Account);
+            FMTLOG(fmtlog::INF, "HPPackServer::OnReceive accept an new Client login from {}:{}, Account:{} ClientType:{}",
+                    szAddress, usPort, message.LoginRequest.Account, message.LoginRequest.ClientType);
 
             Message::PackMessage msg;
             memset(&msg, 0, sizeof(msg));

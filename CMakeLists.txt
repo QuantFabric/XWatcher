@@ -5,7 +5,7 @@ PROJECT(XWatcher)
 set(CMAKE_CXX_FLAGS "-fPIC")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-SET(AppVersion 0.6.1)
+SET(AppVersion 0.6.2)
 SET(XWatcher_Version ${PROJECT_NAME}_${AppVersion})
 
 # 默认输出debug版

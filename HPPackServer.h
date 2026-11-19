@@ -6,7 +6,6 @@
 #include <string.h>
 #include <cstdlib>
 #include <mutex>
-#include <unordered_map>
 #include <unistd.h>
 #include "HPSocket4C.h"
 #include "PackMessage.hpp"
@@ -38,8 +37,8 @@ public:
     void Stop();
     void SendData(HP_CONNID dwConnID, const unsigned char *pBuffer, int iLength);
 public:
-    typedef phmap::parallel_flat_hash_map<HP_CONNID, Connection, phmap::priv::hash_default_hash<HP_CONNID>,
-                                     phmap::priv::hash_default_eq<HP_CONNID>,
+    typedef phmap::parallel_flat_hash_map<HP_CONNID, Connection, phmap::Hash<HP_CONNID>,
+                                     phmap::EqualTo<HP_CONNID>,
                                      std::allocator<std::pair<const HP_CONNID, Connection>>, 8, std::shared_mutex>
     ConnectionMapT;
     static ConnectionMapT m_sConnections;

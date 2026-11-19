@@ -1,6 +1,5 @@
 #include "WatcherEngine.h"
 
-
 WatcherEngine::WatcherEngine()
 {
     m_HPPackServer = NULL;
@@ -74,8 +73,10 @@ void WatcherEngine::HandleThread()
     message.MessageType = Message::EMessageType::EEventLog;
     message.EventLog.Level = Message::EEventLogLevel::EINFO;
     strncpy(message.EventLog.App, APP_NAME, sizeof(message.EventLog.App));
-    fmt::format_to_n(message.EventLog.Event, sizeof(message.EventLog.Event), 
-                    "Colo:{} XWatcher Start", m_XWatcherConfig.Colo);
+    auto formatted = fmt::format_to_n(
+        message.EventLog.Event, sizeof(message.EventLog.Event) - 1,
+        "Colo:{} XWatcher Start", m_XWatcherConfig.Colo);
+    *formatted.out = '\0';
     strncpy(message.EventLog.UpdateTime, Utils::getCurrentTimeUs(), sizeof(message.EventLog.UpdateTime));
     HandlePackMessage(message);
 
@@ -205,28 +206,36 @@ void WatcherEngine::HandleOrderRequest(const Message::PackMessage &msg)
         bool Found = false;
 
         // Prefer the XTrader connection that matches the order account.
-        for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+        m_HPPackServer->m_sConnections.for_each([&](const auto &item)
         {
-            if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
+            if (Found)
             {
-                TargetConnID = it->second.dwConnID;
-                Found = true;
-                break;
+                return;
             }
-        }
+            const Connection &connection = item.second;
+            if (Message::EClientType::EXTRADER == connection.ClientType && Account == connection.Account)
+            {
+                TargetConnID = connection.dwConnID;
+                Found = true;
+            }
+        });
 
         // Fall back to HFTrader only when no matching XTrader is available.
         if(!Found)
         {
-            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+            m_HPPackServer->m_sConnections.for_each([&](const auto &item)
             {
-                if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+                if (Found)
                 {
-                    TargetConnID = it->second.dwConnID;
-                    Found = true;
-                    break;
+                    return;
                 }
-            }
+                const Connection &connection = item.second;
+                if (Message::EClientType::EHFTRADER == connection.ClientType && Account == connection.Account)
+                {
+                    TargetConnID = connection.dwConnID;
+                    Found = true;
+                }
+            });
         }
 
         if(Found)
@@ -248,28 +257,36 @@ void WatcherEngine::HandleActionRequest(const Message::PackMessage &msg)
         bool Found = false;
 
         // Prefer the XTrader connection that matches the action account.
-        for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+        m_HPPackServer->m_sConnections.for_each([&](const auto &item)
         {
-            if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
+            if (Found)
             {
-                TargetConnID = it->second.dwConnID;
-                Found = true;
-                break;
+                return;
             }
-        }
+            const Connection &connection = item.second;
+            if (Message::EClientType::EXTRADER == connection.ClientType && Account == connection.Account)
+            {
+                TargetConnID = connection.dwConnID;
+                Found = true;
+            }
+        });
 
         // Fall back to HFTrader only when no matching XTrader is available.
         if(!Found)
         {
-            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+            m_HPPackServer->m_sConnections.for_each([&](const auto &item)
             {
-                if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+                if (Found)
                 {
-                    TargetConnID = it->second.dwConnID;
-                    Found = true;
-                    break;
+                    return;
                 }
-            }
+                const Connection &connection = item.second;
+                if (Message::EClientType::EHFTRADER == connection.ClientType && Account == connection.Account)
+                {
+                    TargetConnID = connection.dwConnID;
+                    Found = true;
+                }
+            });
         }
 
         if(Found)
@@ -322,14 +339,15 @@ void WatcherEngine::ForwardToXServer(const Message::PackMessage &msg)
 
 void WatcherEngine::HandleSpotMarketData(const Message::PackMessage &msg)
 {
-    for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+    m_HPPackServer->m_sConnections.for_each([&](const auto &item)
     {
-        if(Message::EClientType::EXMARKETCENTER == it->second.ClientType)
+        const Connection &connection = item.second;
+        if (Message::EClientType::EXMARKETCENTER == connection.ClientType)
         {
-            m_HPPackServer->SendData(it->second.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
-            FMTLOG(fmtlog::INF, "WatcherEngine::HandleSpotMarketData send Spot Market Data to Connection:{} Account:{}", it->second.dwConnID, it->second.Account);
+            m_HPPackServer->SendData(connection.dwConnID, reinterpret_cast<const unsigned char*>(&msg), sizeof(msg));
+            FMTLOG(fmtlog::INF, "WatcherEngine::HandleSpotMarketData send Spot Market Data to Connection:{} Account:{}", connection.dwConnID, connection.Account);
         }
-    }
+    });
 }
 
 void WatcherEngine::HandleRiskCommand(const Message::PackMessage &msg)
@@ -343,29 +361,37 @@ void WatcherEngine::HandleRiskCommand(const Message::PackMessage &msg)
         bool SendToHFTrader = false;
 
         // Prefer the HFTrader connection that matches the command account.
-        for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+        m_HPPackServer->m_sConnections.for_each([&](const auto &item)
         {
-            if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+            if (Found)
             {
-                TargetConnID = it->second.dwConnID;
+                return;
+            }
+            const Connection &connection = item.second;
+            if (Message::EClientType::EHFTRADER == connection.ClientType && Account == connection.Account)
+            {
+                TargetConnID = connection.dwConnID;
                 Found = true;
                 SendToHFTrader = true;
-                break;
             }
-        }
+        });
 
         // Fall back to RiskJudge only when no matching HFTrader is available.
         if(!Found)
         {
-            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+            m_HPPackServer->m_sConnections.for_each([&](const auto &item)
             {
-                if(Message::EClientType::EXRISKJUDGE == it->second.ClientType)
+                if (Found)
                 {
-                    TargetConnID = it->second.dwConnID;
-                    Found = true;
-                    break;
+                    return;
                 }
-            }
+                const Connection &connection = item.second;
+                if (Message::EClientType::EXRISKJUDGE == connection.ClientType)
+                {
+                    TargetConnID = connection.dwConnID;
+                    Found = true;
+                }
+            });
         }
 
         if(Found)
@@ -394,29 +420,37 @@ void WatcherEngine::HandleTraderCommand(const Message::PackMessage &msg)
         bool SendToXTrader = false;
 
         // Prefer the XTrader connection that matches the command account.
-        for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+        m_HPPackServer->m_sConnections.for_each([&](const auto &item)
         {
-            if(Message::EClientType::EXTRADER == it->second.ClientType && Account == it->second.Account)
+            if (Found)
             {
-                TargetConnID = it->second.dwConnID;
+                return;
+            }
+            const Connection &connection = item.second;
+            if (Message::EClientType::EXTRADER == connection.ClientType && Account == connection.Account)
+            {
+                TargetConnID = connection.dwConnID;
                 Found = true;
                 SendToXTrader = true;
-                break;
             }
-        }
+        });
 
         // Fall back to HFTrader only when no matching XTrader is available.
         if(!Found)
         {
-            for(auto it = m_HPPackServer->m_sConnections.begin(); it != m_HPPackServer->m_sConnections.end(); it++)
+            m_HPPackServer->m_sConnections.for_each([&](const auto &item)
             {
-                if(Message::EClientType::EHFTRADER == it->second.ClientType && Account == it->second.Account)
+                if (Found)
                 {
-                    TargetConnID = it->second.dwConnID;
-                    Found = true;
-                    break;
+                    return;
                 }
-            }
+                const Connection &connection = item.second;
+                if (Message::EClientType::EHFTRADER == connection.ClientType && Account == connection.Account)
+                {
+                    TargetConnID = connection.dwConnID;
+                    Found = true;
+                }
+            });
         }
 
         if(Found)

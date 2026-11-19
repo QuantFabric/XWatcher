@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include "ShellEngine.hpp"
+#include "fmt/format.h"
 
 class AppManager
 {
@@ -40,8 +41,10 @@ public:
         {
             AppLogPath = p;
         }
-        sprintf(command, "nohup %s > %s/%s_%s_run.log 2>&1 &", cmd.c_str(), AppLogPath.c_str(), 
-        AppName.c_str(), AppStatus.Account);
+        auto formatted = fmt::format_to_n(
+            command, sizeof(command) - 1, "nohup {} > {}/{}_{}_run.log 2>&1 &",
+            cmd, AppLogPath, AppName, AppStatus.Account);
+        *formatted.out = '\0';
         strncpy(AppStatus.StartScript, command, sizeof(AppStatus.StartScript));
         strncpy(AppStatus.CommitID, APP_COMMITID, sizeof(AppStatus.CommitID));
         strncpy(AppStatus.UtilsCommitID, UTILS_COMMITID, sizeof(AppStatus.UtilsCommitID));
@@ -55,7 +58,9 @@ public:
     {
         std::string Status;
         char cmd[128] = {0};
-        sprintf(cmd, "ps aux | grep %s | grep %d | grep -v grep", AppStatus.AppName, AppStatus.PID);
+        auto formatted = fmt::format_to_n(
+            cmd, sizeof(cmd) - 1, "ps aux | grep {} | grep {} | grep -v grep", AppStatus.AppName, AppStatus.PID);
+        *formatted.out = '\0';
         std::vector<std::string> result;
         int ret = ShellEngine::ExecuteShellCommand(cmd, result);
         // USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND

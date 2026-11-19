@@ -43,14 +43,19 @@ void HPPackServer::Start()
     char errorString[256] = {0};
     if (::HP_Server_Start(m_pServer, m_ServerIP.c_str(), m_ServerPort))
     {
-        sprintf(errorString, "HPPackServer::Start listen to %s:%d successed", m_ServerIP.c_str(), m_ServerPort);
+        auto formatted = fmt::format_to_n(errorString, sizeof(errorString) - 1,
+                                          "HPPackServer::Start listen to {}:{} successed", m_ServerIP, m_ServerPort);
+        *formatted.out = '\0';
         FMTLOG(fmtlog::INF, "HPPackServer::Start listen to {}:{} successed", m_ServerIP, m_ServerPort);
         message.EventLog.Level = Message::EEventLogLevel::EINFO;
     }
     else
     {
-        sprintf(errorString, "HPPackServer::Start listen to %s:%d failed, error code:%d error massage:%s",
-                m_ServerIP.c_str(), m_ServerPort, ::HP_Client_GetLastError(m_pServer), HP_Client_GetLastErrorDesc(m_pServer));
+        auto formatted = fmt::format_to_n(
+            errorString, sizeof(errorString) - 1,
+            "HPPackServer::Start listen to {}:{} failed, error code:{} error massage:{}",
+            m_ServerIP, m_ServerPort, ::HP_Client_GetLastError(m_pServer), HP_Client_GetLastErrorDesc(m_pServer));
+        *formatted.out = '\0';
         FMTLOG(fmtlog::WRN, "HPPackServer::Start listen to {}:{} failed, error code:{} error massage:{}",
                 m_ServerIP, m_ServerPort, ::HP_Client_GetLastError(m_pServer), HP_Client_GetLastErrorDesc(m_pServer));
         message.EventLog.Level = Message::EEventLogLevel::EERROR;
@@ -73,8 +78,11 @@ void HPPackServer::SendData(HP_CONNID dwConnID, const unsigned char *pBuffer, in
     if(!ret)
     {
         char errorString[512] = {0};
-        sprintf(errorString, "HPPackServer::SendData failed, sys error:%s, error code:%d, error message:%s",
-                SYS_GetLastErrorStr(), HP_Client_GetLastError(m_pServer), HP_Client_GetLastErrorDesc(m_pServer));
+        auto formatted = fmt::format_to_n(
+            errorString, sizeof(errorString) - 1,
+            "HPPackServer::SendData failed, sys error:{}, error code:{}, error message:{}",
+            SYS_GetLastErrorStr(), HP_Client_GetLastError(m_pServer), HP_Client_GetLastErrorDesc(m_pServer));
+        *formatted.out = '\0';
         FMTLOG(fmtlog::WRN, "HPPackServer::SendData failed, sys error:{}, error code:{}, error message:{}",
                 SYS_GetLastErrorStr(), HP_Client_GetLastError(m_pServer), HP_Client_GetLastErrorDesc(m_pServer));
 
@@ -99,12 +107,9 @@ En_HP_HandleResult __stdcall HPPackServer::OnAccept(HP_Server pSender, HP_CONNID
     memset(&connection, 0, sizeof(connection));
     connection.dwConnID = dwConnID;
     connection.pSender = pSender;
-    sprintf(connection.UUID, "%d", usPort);
-    auto it = m_sConnections.find(dwConnID);
-    if (m_sConnections.end() == it)
-    {
-        m_sConnections.insert(std::pair<HP_CONNID, Connection>(dwConnID, connection));
-    }
+    auto formatted = fmt::format_to_n(connection.UUID, sizeof(connection.UUID) - 1, "{}", usPort);
+    *formatted.out = '\0';
+    m_sConnections.try_emplace(dwConnID, connection);
     FMTLOG(fmtlog::INF, "HPPackServer::OnAccept accept an new connection dwConnID:{} from {}:{}",  dwConnID, szAddress, usPort);
     return HR_OK;
 }
@@ -128,27 +133,33 @@ En_HP_HandleResult __stdcall HPPackServer::OnReceive(HP_Server pSender, HP_CONNI
     // LoginRequest
     if (Message::EMessageType::ELoginRequest == message.MessageType)
     {
-        auto it = m_sConnections.find(dwConnID);
-        if (it != m_sConnections.end())
+        Message::PackMessage msg;
+        memset(&msg, 0, sizeof(msg));
+        bool updated = m_sConnections.modify_if(dwConnID, [&](auto &item)
         {
-            it->second.ClientType = message.LoginRequest.ClientType;
-            strncpy(it->second.Account, message.LoginRequest.Account, sizeof(it->second.Account));
-            strncpy(it->second.PassWord, message.LoginRequest.PassWord, sizeof(it->second.PassWord));
-            strncpy(it->second.UUID, message.LoginRequest.UUID, sizeof(it->second.UUID));
+            Connection &connection = item.second;
+            connection.ClientType = message.LoginRequest.ClientType;
+            strncpy(connection.Account, message.LoginRequest.Account, sizeof(connection.Account));
+            strncpy(connection.PassWord, message.LoginRequest.PassWord, sizeof(connection.PassWord));
+            strncpy(connection.UUID, message.LoginRequest.UUID, sizeof(connection.UUID));
             char errorString[512] = {0};
-            sprintf(errorString, "HPPackServer::OnReceive accept an new Client login from %s:%d, Account:%s",
-                    szAddress, usPort, message.LoginRequest.Account);
-            FMTLOG(fmtlog::INF, "HPPackServer::OnReceive accept an new Client login from {}:{}, Account:{} ClientType:{}",
-                    szAddress, usPort, message.LoginRequest.Account, message.LoginRequest.ClientType);
+            auto formatted = fmt::format_to_n(
+                errorString, sizeof(errorString) - 1,
+                "HPPackServer::OnReceive accept an new Client login from {}:{}, Account:{}",
+                szAddress, usPort, message.LoginRequest.Account);
+            *formatted.out = '\0';
 
-            Message::PackMessage msg;
-            memset(&msg, 0, sizeof(msg));
             msg.MessageType = Message::EMessageType::EEventLog;
             msg.EventLog.Level = Message::EEventLogLevel::EINFO;
             strncpy(msg.EventLog.App, APP_NAME, sizeof(msg.EventLog.App));
-            strncpy(msg.EventLog.Account, it->second.Account, sizeof(msg.EventLog.Account));
+            strncpy(msg.EventLog.Account, connection.Account, sizeof(msg.EventLog.Account));
             strncpy(msg.EventLog.Event, errorString, sizeof(msg.EventLog.Event));
             strncpy(msg.EventLog.UpdateTime, Utils::getCurrentTimeUs(), sizeof(msg.EventLog.UpdateTime));
+        });
+        if (updated)
+        {
+            FMTLOG(fmtlog::INF, "HPPackServer::OnReceive accept an new Client login from {}:{}, Account:{} ClientType:{}",
+                    szAddress, usPort, msg.EventLog.Account, message.LoginRequest.ClientType);
             while(!m_PackMessageQueue.Push(msg));
         }
     }
@@ -162,25 +173,31 @@ En_HP_HandleResult __stdcall HPPackServer::OnClose(HP_Server pSender, HP_CONNID 
     USHORT usPort;
     ::HP_Server_GetRemoteAddress(pSender, dwConnID, szAddress, &iAddressLen, &usPort);
 
-    auto it = m_sConnections.find(dwConnID);
-    if (it != m_sConnections.end())
+    Message::PackMessage message;
+    memset(&message, 0, sizeof(message));
+    bool erased = m_sConnections.erase_if(dwConnID, [&](auto &item)
     {
+        Connection &connection = item.second;
         char errorString[512] = {0};
-        sprintf(errorString, "HPPackServer::OnClose have an connection dwConnID:%d Account:%s from %s:%d closed",  
-                dwConnID, it->second.Account, szAddress, usPort);
-        FMTLOG(fmtlog::WRN, "HPPackServer::OnClose have an connection dwConnID:{} Account:{} from {}:{} closed",  
-                dwConnID, it->second.Account, szAddress, usPort);
+        auto formatted = fmt::format_to_n(
+            errorString, sizeof(errorString) - 1,
+            "HPPackServer::OnClose have an connection dwConnID:{} Account:{} from {}:{} closed",
+            dwConnID, connection.Account, szAddress, usPort);
+        *formatted.out = '\0';
         // EventLog
-        Message::PackMessage message;
-        memset(&message, 0, sizeof(message));
         message.MessageType = Message::EMessageType::EEventLog;
         message.EventLog.Level = Message::EEventLogLevel::EWARNING;
         strncpy(message.EventLog.App, APP_NAME, sizeof(message.EventLog.App));
-        strncpy(message.EventLog.Account, it->second.Account, sizeof(message.EventLog.Account));
+        strncpy(message.EventLog.Account, connection.Account, sizeof(message.EventLog.Account));
         strncpy(message.EventLog.Event, errorString, sizeof(message.EventLog.Event));
         strncpy(message.EventLog.UpdateTime, Utils::getCurrentTimeUs(), sizeof(message.EventLog.UpdateTime));
+        return true;
+    });
+    if (erased)
+    {
+        FMTLOG(fmtlog::WRN, "HPPackServer::OnClose have an connection dwConnID:{} Account:{} from {}:{} closed",
+                dwConnID, message.EventLog.Account, szAddress, usPort);
         while(!m_PackMessageQueue.Push(message));
-        m_sConnections.erase(dwConnID);
     }
     
     return HR_OK;

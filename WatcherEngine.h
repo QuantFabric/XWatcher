@@ -4,7 +4,7 @@
 #include <list>
 #include <vector>
 #include <mutex>
-#include <unordered_map>
+#include "phmap.h"
 #include "FMTLogger.hpp"
 #include "HPPackServer.h"
 #include "HPPackClient.h"
@@ -53,7 +53,7 @@ private:
     int m_CloseTime;
     std::thread* m_pWorkThread;
     std::string m_Command;
-    std::unordered_map<std::string, Message::PackMessage> m_AppStatusMap;
+    phmap::flat_hash_map<std::string, Message::PackMessage> m_AppStatusMap;
 };
 
 #endif // WATCHERENGINE_H
